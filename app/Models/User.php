@@ -11,11 +11,6 @@ class User extends Authenticatable
 {
     use HasApiTokens, HasFactory, Notifiable;
 
-    /**
-     * The attributes that are mass assignable.
-     *
-     * @var array<int, string>
-     */
     protected $fillable = [
         'name',
         'email',
@@ -26,24 +21,44 @@ class User extends Authenticatable
         'profile_photo',
     ];
 
-    /**
-     * The attributes that should be hidden for serialization.
-     *
-     * @var array<int, string>
-     */
     protected $hidden = [
         'password',
         'remember_token',
     ];
 
-    /**
-     * The attributes that should be cast.
-     *
-     * @var array<string, string>
-     */
     protected $casts = [
         'email_verified_at' => 'datetime',
         'is_admin' => 'boolean',
         'is_employer' => 'boolean',
     ];
+
+    /**
+     * Get the jobs saved by the user
+     */
+    public function savedJobs()
+    {
+        return $this->belongsToMany(Job::class, 'saved_jobs')->withTimestamps();
+    }
+
+    /**
+     * Get the jobs posted by the user (if employer)
+     */
+    public function postedJobs()
+    {
+        return $this->hasMany(Job::class, 'employer_id');
+    }
+
+    /**
+     * Get the URL for the profile photo
+     */
+    public function getProfilePhotoUrlAttribute()
+    {
+        if ($this->profile_photo) {
+            // Return the full URL to the stored image
+            return asset('storage/' . $this->profile_photo);
+        }
+        
+        // Return a default avatar if no profile photo
+        return 'https://ui-avatars.com/api/?name=' . urlencode($this->name) . '&color=7F9CF5&background=EBF4FF';
+    }
 }
