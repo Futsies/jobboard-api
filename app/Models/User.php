@@ -61,4 +61,15 @@ class User extends Authenticatable
         // Return a default avatar if no profile photo
         return 'https://ui-avatars.com/api/?name=' . urlencode($this->name) . '&color=7F9CF5&background=EBF4FF';
     }
+
+    /**
+     * Delete profile picture
+     */
+    public function deleteProfilePhoto()
+    {
+        if ($this->profile_photo) {
+            Storage::delete('public/' . $this->profile_photo);
+            $this->update(['profile_photo' => null]);
+        }
+    }
 }

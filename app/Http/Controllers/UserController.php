@@ -42,7 +42,9 @@ class UserController extends Controller
         // Handle profile photo upload
         if ($request->hasFile('profile_photo')) {
             // Delete old profile photo if exists
-            $user->deleteProfilePhoto();
+            if ($user->profile_photo) {
+                Storage::disk('public')->delete($user->profile_photo);
+            }
             
             $photo = $request->file('profile_photo');
             
@@ -53,18 +55,12 @@ class UserController extends Controller
             $path = $photo->storeAs('public', $filename);
             
             // Store the relative path in the database
-            $validated['profile_photo_path'] = $filename;
-            
-            // Remove the profile_photo from validated data as it's not a database field
-            unset($validated['profile_photo']);
+            $validated['profile_photo'] = $filename;
         }
 
         $user->update($validated);
         
-        return response()->json([
-            'user' => $user,
-            'profile_photo_url' => $user->profile_photo_url
-        ]);
+        return response()->json($user);
     }
 
     /**
@@ -73,7 +69,12 @@ class UserController extends Controller
     public function removeProfilePhoto($id)
     {
         $user = User::findOrFail($id);
-        $user->deleteProfilePhoto();
+        
+        if ($user->profile_photo) {
+            Storage::disk('public')->delete($user->profile_photo);
+            $user->profile_photo = null;
+            $user->save();
+        }
         
         return response()->json(['message' => 'Profile photo removed successfully']);
     }
@@ -86,7 +87,7 @@ class UserController extends Controller
         $user = User::findOrFail($userId);
         $jobId = $request->input('job_id');
         
-        if (!$user->hasSavedJob($jobId)) {
+        if (!$user->savedJobs()->where('job_id', $jobId)->exists()) {
             $user->savedJobs()->attach($jobId);
             return response()->json(['message' => 'Job saved successfully']);
         }

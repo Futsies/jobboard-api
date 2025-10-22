@@ -32,4 +32,5 @@ Route::middleware('auth:sanctum')->group(function () {
     
     Route::get('/users', [UserController::class, 'index']); // Get all users
     Route::get('/users/{id}', [UserController::class, 'show']); // Get specific user
+    Route::post('/users/{id}', [UserController::class, 'update']); // Update user
 });
