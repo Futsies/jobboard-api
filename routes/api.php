@@ -37,4 +37,6 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Mail requests
     Route::post('/request-employer-role', [MailController::class, 'requestEmployerRole']);
+
+    Route::post('/jobs', [JobController::class, 'store']); // Create Job
 });
