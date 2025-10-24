@@ -6,6 +6,7 @@ use App\Models\Job;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Log;
 
 class JobController extends Controller
 {
@@ -66,43 +67,69 @@ class JobController extends Controller
     /**
      * Display the specified resource.
      *
-     * @param  \App\Models\Job  $job
-     * @return \Illuminate\Http\Response
+     * @param  string  $id  
+     * @return \Illuminate\Http\JsonResponse
      */
-    public function show(Job $job)
+    public function show(string $id) 
     {
-        $job = Job::with('employer')->findOrFail($id);
+        // Now $id is defined and can be used
+        $job = Job::findOrFail($id);
         return response()->json($job);
     }
 
     /**
      * Update the specified resource in storage.
+     * Use POST route, manually find Job by ID.
      *
      * @param  \Illuminate\Http\Request  $request
-     * @param  \App\Models\Job  $job
-     * @return \Illuminate\Http\Response
+     * @param  string  $id  // <-- USE string $id
+     * @return \Illuminate\Http\JsonResponse
      */
-    public function update(Request $request, Job $job)
+    public function update(Request $request, string $id) // <-- USE string $id
     {
-        $validated = $request->validate([
-            'title' => 'sometimes|required|string|max:255',
-            'description' => 'sometimes|required|string',
-            'location' => 'sometimes|required|string',
-            'job_type' => 'nullable|string',
-            'salary' => 'nullable|numeric',
-            'complete' => 'boolean',
-            'company_name' => 'sometimes|required|string|max:255',
-            'company_logo' => 'nullable|image|mimes:jpg,png,jpeg,gif|max:2048',
-            'category' => 'nullable|string|max:255',
-        ]);
+        // --- Manually find the job ---
+        $job = Job::findOrFail($id);
+        // --- End Change ---
 
-        if ($request->hasFile('company_logo')) {
-            $path = $request->file('company_logo')->store('logos', 'public');
-            $validated['company_logo'] = $path;
+        // Authorization Check
+        if ($request->user()->id != $job->employer_id && !$request->user()->is_admin) {
+            return response()->json(['message' => 'Unauthorized...'], 403);
         }
 
-        $job->update($validated);
-        return response()->json($job);
+        // Validation
+        $validated = $request->validate([
+            'job_title' => 'required|string|max:255',
+            'job_description' => 'required|string',
+            'job_location' => 'required|string|max:255',
+            'job_type' => 'required|string|in:Full-time,Part-time,Contract,Internship',
+            'company_name' => 'required|string|max:255',
+            'category' => 'required|string|max:255',
+            'salary' => 'nullable|numeric|min:0',
+            'company_logo' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:5120',
+        ]);
+
+        // Handle Logo Update
+        if ($request->hasFile('company_logo')) {
+            if ($job->company_logo) { Storage::disk('public')->delete($job->company_logo); }
+            $logo = $request->file('company_logo');
+            $filename = 'company-logos/' . Str::uuid() . '.' . $logo->getClientOriginalExtension();
+            $logo->storeAs('public', $filename);
+            $validated['company_logo'] = $filename;
+        }
+
+        // Update the job
+        $updated = $job->update($validated); // This will now update the correct record
+
+        // Log result (optional but helpful)
+        if ($updated) {
+            Log::info('Job ID: ' . $job->id . ' updated successfully in DB.');
+        } else {
+            Log::error('Job ID: ' . $job->id . ' FAILED to update in DB.');
+        }
+
+        // Return the *correctly* loaded and updated job
+        // Eager load employer details for the response
+        return response()->json($job->load('employer'));
     }
 
     /**
