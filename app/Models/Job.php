@@ -4,6 +4,9 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Job extends Model
 {
@@ -35,16 +38,26 @@ class Job extends Model
     /**
      * Get the employer who posted the job
      */
-    public function employer()
+    public function employer(): BelongsTo
     {
         return $this->belongsTo(User::class, 'employer_id');
     }
 
     /**
-     * Get users who saved this job
+     * The users who have saved this job.
      */
-    public function savedByUsers()
+    public function savedByUsers(): BelongsToMany
     {
-        return $this->belongsToMany(User::class, 'saved_jobs');
+        return $this->belongsToMany(User::class, 'saved_jobs', 'job_id', 'user_id')
+                    ->withTimestamps(); // Include timestamps if you want created_at/updated_at on pivot
     }
+
+    /**
+     * Get the applications received for this job.
+     */
+    public function jobApplications(): HasMany
+    {
+        return $this->hasMany(JobApplication::class, 'job_id');
+    }
+
 }

@@ -6,6 +6,7 @@ use App\Http\Controllers\JobController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\MailController;
+use App\Http\Controllers\JobApplicationController;
 
 Route::get('/user', function (Request $request) {
     return $request->user();
@@ -40,4 +41,12 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::post('/jobs', [JobController::class, 'store']); // Create Job
     Route::post('/jobs/{id}', [JobController::class, 'update']); // Update Job
+
+    // Saved Jobs routes
+    Route::post('/users/{userId}/save-job', [UserController::class, 'saveJob']);
+    Route::delete('/users/{userId}/unsave-job/{jobId}', [UserController::class, 'unsaveJob']);
+    Route::get('/users/{userId}/saved-job-ids', [UserController::class, 'getSavedJobIds']);
+
+    // Applications
+    Route::post('/jobs/{jobId}/apply', [JobApplicationController::class, 'store']);
 });

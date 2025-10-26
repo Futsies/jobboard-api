@@ -3,9 +3,11 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
+use App\Models\Job;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Auth;
 
 class UserController extends Controller
 {
@@ -80,40 +82,77 @@ class UserController extends Controller
     }
 
     /**
-     * Save a job for the user
+     * Save a job for the specified user.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @param  string  $userId
+     * @return \Illuminate\Http\JsonResponse
      */
-    public function saveJob(Request $request, $userId)
+    public function saveJob(Request $request, string $userId)
     {
-        $user = User::findOrFail($userId);
-        $jobId = $request->input('job_id');
-        
-        if (!$user->savedJobs()->where('job_id', $jobId)->exists()) {
-            $user->savedJobs()->attach($jobId);
-            return response()->json(['message' => 'Job saved successfully']);
+        // Authorization: Ensure the logged-in user matches the userId in the URL
+        if (Auth::id() != $userId) {
+            return response()->json(['message' => 'Unauthorized'], 403);
         }
-        
-        return response()->json(['message' => 'Job already saved'], 400);
-    }
 
-    /**
-     * Remove a saved job for the user
-     */
-    public function unsaveJob(Request $request, $userId)
-    {
+        $validated = $request->validate([
+            'job_id' => 'required|integer|exists:jobs,id',
+        ]);
+
         $user = User::findOrFail($userId);
-        $jobId = $request->input('job_id');
-        
-        $user->savedJobs()->detach($jobId);
-        
-        return response()->json(['message' => 'Job removed from saved jobs']);
+        $jobId = $validated['job_id'];
+
+        // Use syncWithoutDetaching to add the relationship if it doesn't exist
+        // This prevents errors if the job is already saved
+        $user->savedJobs()->syncWithoutDetaching([$jobId]);
+
+        return response()->json(['message' => 'Job saved successfully']);
     }
 
     /**
-     * Get saved jobs for the user
+     * Remove a saved job for the specified user.
+     *
+     * @param  \Illuminate\Http\Request  $request  // Request needed to get job_id
+     * @param  string  $userId
+     * @param  string  $jobId // Get job ID directly from route
+     * @return \Illuminate\Http\JsonResponse
      */
-    public function getSavedJobs($userId)
+    public function unsaveJob(string $userId, string $jobId) // Changed signature
     {
-        $user = User::with('savedJobs')->findOrFail($userId);
-        return response()->json($user->savedJobs);
+         // Authorization: Ensure the logged-in user matches the userId in the URL
+        if (Auth::id() != $userId) {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
+
+        // Validate job ID exists (optional but good practice)
+        Job::findOrFail($jobId);
+
+        $user = User::findOrFail($userId);
+
+        // Use detach to remove the relationship
+        $user->savedJobs()->detach($jobId);
+
+        return response()->json(['message' => 'Job unsaved successfully']);
+    }
+
+    /**
+     * Get IDs of jobs saved by the specified user.
+     *
+     * @param  string  $userId
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function getSavedJobIds(string $userId)
+    {
+         // Authorization: Ensure the logged-in user matches the userId in the URL
+        if (Auth::id() != $userId) {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
+
+        $user = User::findOrFail($userId);
+
+        // Fetch only the IDs of the saved jobs
+        $savedJobIds = $user->savedJobs()->pluck('jobs.id'); // Use pluck for efficiency
+
+        return response()->json($savedJobIds);
     }
 }
