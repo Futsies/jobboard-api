@@ -6,6 +6,8 @@ use Laravel\Sanctum\HasApiTokens;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class User extends Authenticatable
 {
@@ -35,15 +37,16 @@ class User extends Authenticatable
     /**
      * Get the jobs saved by the user
      */
-    public function savedJobs()
+    public function savedJobs(): BelongsToMany
     {
-        return $this->belongsToMany(Job::class, 'saved_jobs')->withTimestamps();
+        return $this->belongsToMany(Job::class, 'saved_jobs', 'user_id', 'job_id')
+                    ->withTimestamps();
     }
 
     /**
      * Get the jobs posted by the user (if employer)
      */
-    public function postedJobs()
+    public function postedJobs(): HasMany
     {
         return $this->hasMany(Job::class, 'employer_id');
     }
@@ -72,4 +75,13 @@ class User extends Authenticatable
             $this->update(['profile_photo' => null]);
         }
     }
+
+    /**
+     * Get the job applications submitted by the user.
+     */
+    public function jobApplications(): HasMany
+    {
+        return $this->hasMany(JobApplication::class, 'user_id');
+    }
+
 }
