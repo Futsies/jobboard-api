@@ -155,4 +155,26 @@ class UserController extends Controller
 
         return response()->json($savedJobIds);
     }
+
+    /**
+     * Get the jobs posted by the specified user.
+     *
+     * @param  string  $userId
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function getPostedJobs(string $userId)
+    {
+        // Authorization: Ensure the logged-in user is requesting their own jobs
+        if (Auth::id() != $userId && !Auth::user()->is_admin) {
+             return response()->json(['message' => 'Unauthorized'], 403);
+        }
+
+        $user = User::findOrFail($userId);
+
+        // Fetch jobs where employer_id matches the user's ID
+        // Order by latest first
+        $postedJobs = $user->postedJobs()->latest()->get();
+
+        return response()->json($postedJobs);
+    }
 }

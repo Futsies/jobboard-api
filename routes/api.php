@@ -35,6 +35,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/users', [UserController::class, 'index']); // Get all users
     Route::get('/users/{id}', [UserController::class, 'show']); // Get specific user
     Route::post('/users/{id}', [UserController::class, 'update']); // Update user
+    Route::get('/users/{userId}/posted-jobs', [UserController::class, 'getPostedJobs']); // Get uploaded Jobs
 
     // Mail requests
     Route::post('/request-employer-role', [MailController::class, 'requestEmployerRole']);
