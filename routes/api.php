@@ -7,6 +7,7 @@ use App\Http\Controllers\UserController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\MailController;
 use App\Http\Controllers\JobApplicationController;
+use App\Http\Controllers\InterviewController;
 
 Route::get('/user', function (Request $request) {
     return $request->user();
@@ -50,4 +51,10 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Applications
     Route::post('/jobs/{jobId}/apply', [JobApplicationController::class, 'store']);
+    Route::get('/applications/received', [JobApplicationController::class, 'index']); // Get application
+    Route::get('/applications/{applicationId}', [JobApplicationController::class, 'show']); // Get details
+    Route::get('/applications/{applicationId}/resume', [JobApplicationController::class, 'downloadResume']); // Download resume
+    Route::get('/applications/{applicationId}/cover-letter', [JobApplicationController::class, 'downloadCoverLetter']); // Download Coverletter
+    Route::delete('/applications/{applicationId}', [JobApplicationController::class, 'destroy']); // Delete
+    Route::post('/applications/{applicationId}/schedule-interview', [InterviewController::class, 'store']); // Schedule Interview
 });
