@@ -8,9 +8,46 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
+use Illuminate\Validation\ValidationException;
 
 class InterviewController extends Controller
 {
+    /**
+     * Display a listing of interviews scheduled BY the authenticated user.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function index(Request $request) // Method to get scheduled interviews
+    {
+        $user = Auth::user();
+
+        // Ensure user is an employer or admin who can schedule
+        if (!$user->is_employer && !$user->is_admin) {
+            // Or maybe return empty array? Depends on desired behaviour.
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
+
+        try {
+            // Fetch interviews where employer_id matches the logged-in user
+            $interviews = Interview::where('employer_id', $user->id)
+                                ->with([
+                                    // Eager load necessary details for display
+                                    'jobApplication:id,user_id,job_id', // Select specific keys
+                                    'jobApplication.user:id,name',      // Applicant name
+                                    'jobApplication.job:id,job_title' // Job title
+                                ])
+                                ->orderBy('scheduled_at', 'asc') // Order chronologically
+                                ->get();
+
+            return response()->json($interviews);
+
+        } catch (\Exception $e) {
+            Log::error('Error fetching scheduled interviews for User ID: ' . $user->id . ' - ' . $e->getMessage());
+            return response()->json(['message' => 'Could not retrieve scheduled interviews.'], 500);
+        }
+    }
+    
     /**
      * Store a newly created interview resource in storage.
      *

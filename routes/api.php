@@ -56,5 +56,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/applications/{applicationId}/resume', [JobApplicationController::class, 'downloadResume']); // Download resume
     Route::get('/applications/{applicationId}/cover-letter', [JobApplicationController::class, 'downloadCoverLetter']); // Download Coverletter
     Route::delete('/applications/{applicationId}', [JobApplicationController::class, 'destroy']); // Delete
+    
+    // Interview Scheduling
     Route::post('/applications/{applicationId}/schedule-interview', [InterviewController::class, 'store']); // Schedule Interview
+    Route::post('/applications/{applicationId}/schedule-interview', [InterviewController::class, 'store']); // Create
+    Route::get('/interviews/scheduled', [InterviewController::class, 'index']); // Get interviews scheduled BY current user
 });

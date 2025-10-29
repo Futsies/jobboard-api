@@ -106,6 +106,7 @@ class JobController extends Controller
             'category' => 'required|string|max:255',
             'salary' => 'nullable|numeric|min:0',
             'company_logo' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:5120',
+            'complete' => 'required|boolean',
         ]);
 
         // Handle Logo Update
