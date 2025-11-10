@@ -246,12 +246,15 @@ class JobApplicationController extends Controller
             $application = JobApplication::with('job:id,employer_id')->findOrFail($applicationId);
             $user = Auth::user();
 
-            // Authorization: Only job owner or admin can delete
-            if (!$application->job || ($user->id !== $application->job->employer_id && !$user->is_admin)) {
-                // The Log call below now works because of the import
-                Log::warning('Unauthorized delete attempt for Application ID: ' . $applicationId . ' by User ID: ' . $user->id);
-                return response()->json(['message' => 'Unauthorized'], 403);
-            }
+            $isApplicant = $user->id === $application->user_id;
+            $isJobOwner = $application->job && $user->id === $application->job->employer_id;
+            $isAdmin = $user->is_admin;
+
+            // Allow delete if user is the applicant OR the job owner OR an admin
+            if (!$isApplicant && !$isJobOwner && !$isAdmin) {
+                    Log::warning('Unauthorized delete attempt for Application ID: ' . $applicationId . ' by User ID: ' . $user->id);
+                    return response()->json(['message' => 'Unauthorized'], 403);
+                }
 
             // Delete files from storage if they exist
             if ($application->resume_path && Storage::exists($application->resume_path)) {
@@ -277,5 +280,26 @@ class JobApplicationController extends Controller
             Log::error('Error deleting Application ID: ' . $applicationId . ' - ' . $e->getMessage());
             return response()->json(['message' => 'Could not delete application.'], 500);
         }
+    }
+
+    /**
+     * NEW METHOD
+     * Display a listing of applications submitted BY the authenticated user.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function getSubmittedApplications(Request $request)
+    {
+        $user = Auth::user();
+
+        // Fetch applications submitted by this user
+        // Eager load job details, including company_name for the list
+        $applications = JobApplication::where('user_id', $user->id)
+                                      ->with(['job:id,job_title,company_name']) 
+                                      ->latest() // Order by most recent first
+                                      ->get();
+
+        return response()->json($applications);
     }
 }

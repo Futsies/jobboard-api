@@ -177,4 +177,24 @@ class UserController extends Controller
 
         return response()->json($postedJobs);
     }
+
+    /**
+     * Get the job applications submitted by the authenticated user.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function getSubmittedApplications(Request $request)
+    {
+        $user = Auth::user();
+
+        // Use the relationship we defined on the User model
+        // Eager load the 'job' relationship to get job details
+        $applications = $user->jobApplications()
+                              ->with('job:id,job_title,company_name') // Load job details, select only needed columns
+                              ->latest() // Show newest applications first
+                              ->get();
+
+        return response()->json($applications);
+    }
 }
