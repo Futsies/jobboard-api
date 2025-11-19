@@ -14,17 +14,17 @@ return new class extends Migration
     public function up()
     {
         Schema::table('jobs', function (Blueprint $table) {
-            if (! Schema::hasColumn('jobs', 'title')) {
-                $table->string('title')->after('id');
+            if (! Schema::hasColumn('jobs', 'job_title')) {
+                $table->string('job_title')->after('employer_id');
             }
-            if (! Schema::hasColumn('jobs', 'description')) {
-                $table->text('description')->nullable()->after('title');
+            if (! Schema::hasColumn('jobs', 'job_description')) {
+                $table->text('job_description')->nullable()->after('job_title');
             }
-            if (! Schema::hasColumn('jobs', 'location')) {
-                $table->string('location')->nullable()->after('description');
+            if (! Schema::hasColumn('jobs', 'job_location')) {
+                $table->string('job_location')->nullable()->after('job_description');
             }
             if (! Schema::hasColumn('jobs', 'job_type')) {
-                $table->string('job_type')->default('full-time')->after('location');
+                $table->string('job_type')->default('full-time')->after('job_location');
             }
             if (! Schema::hasColumn('jobs', 'salary')) {
                 $table->decimal('salary', 10, 2)->nullable()->after('job_type');
@@ -51,6 +51,18 @@ return new class extends Migration
      */
     public function down()
     {
-        Schema::dropIfExists('jobs');
+        Schema::table('jobs', function (Blueprint $table) {
+            $table->dropColumn([
+                'job_title',
+                'job_description',
+                'job_location',
+                'job_type',
+                'salary',
+                'complete',
+                'company_name',
+                'company_logo',
+                'category'
+            ]);
+        });
     }
 };

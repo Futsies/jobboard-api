@@ -13,39 +13,48 @@ use Illuminate\Validation\ValidationException;
 class InterviewController extends Controller
 {
     /**
-     * Display a listing of interviews scheduled BY the authenticated user.
-     *
-     * @param  \Illuminate\Http\Request  $request
-     * @return \Illuminate\Http\JsonResponse
+     * Display a listing of scheduled interviews.
+     * This method is now smart:
+     * - If you're an employer, you see interviews you scheduled.
+     * - If you're an applicant, you see interviews you're invited to.
      */
-    public function index(Request $request) // Method to get scheduled interviews
+    public function index(Request $request)
     {
         $user = Auth::user();
 
-        // Ensure user is an employer or admin who can schedule
-        if (!$user->is_employer && !$user->is_admin) {
-            // Or maybe return empty array? Depends on desired behaviour.
-            return response()->json(['message' => 'Unauthorized'], 403);
+        if ($user->is_employer || $user->is_admin) {
+            
+            // --- EMPLOYER LOGIC (What you likely had before) ---
+            // Get IDs of jobs posted by this employer
+            $postedJobIds = $user->postedJobs()->pluck('id');
+            
+            // Get IDs of applications for those jobs
+            $applicationIds = JobApplication::whereIn('job_id', $postedJobIds)->pluck('id');
+
+            // Get interviews for those applications
+            $interviews = Interview::whereIn('job_application_id', $applicationIds)
+                                  ->with([
+                                      'jobApplication.user:id,name', // Load applicant
+                                      'jobApplication.job:id,job_title' // Load job
+                                  ])
+                                  ->get();
+        } else {
+            
+            // --- APPLICANT LOGIC (This is the fix) ---
+            // Get IDs of applications submitted by this applicant
+            $applicationIds = $user->jobApplications()->pluck('id');
+
+            // Get interviews for those applications
+            $interviews = Interview::whereIn('job_application_id', $applicationIds)
+                                  ->with([
+                                      'jobApplication.user:id,name', // Load applicant (themselves)
+                                      'jobApplication.job:id,job_title' // Load job
+                                  ])
+                                  ->get();
         }
+        // --- END NEW LOGIC ---
 
-        try {
-            // Fetch interviews where employer_id matches the logged-in user
-            $interviews = Interview::where('employer_id', $user->id)
-                                ->with([
-                                    // Eager load necessary details for display
-                                    'jobApplication:id,user_id,job_id', // Select specific keys
-                                    'jobApplication.user:id,name',      // Applicant name
-                                    'jobApplication.job:id,job_title' // Job title
-                                ])
-                                ->orderBy('scheduled_at', 'asc') // Order chronologically
-                                ->get();
-
-            return response()->json($interviews);
-
-        } catch (\Exception $e) {
-            Log::error('Error fetching scheduled interviews for User ID: ' . $user->id . ' - ' . $e->getMessage());
-            return response()->json(['message' => 'Could not retrieve scheduled interviews.'], 500);
-        }
+        return response()->json($interviews);
     }
     
     /**

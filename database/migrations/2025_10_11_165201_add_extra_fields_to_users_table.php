@@ -23,9 +23,9 @@ return new class extends Migration
             if (!Schema::hasColumn('users', 'is_employer')) {
                 $table->boolean('is_employer')->default(false)->after('is_admin');
             }
-            if (!Schema::hasColumn('users', 'profile_photo_path')) {
+            if (!Schema::hasColumn('users', 'profile_photo_')) {
                 // Store the file path, not the image data
-                $table->string('profile_photo_path')->nullable()->after('is_employer');
+                $table->string('profile_photo')->nullable()->after('is_employer');
             }
         });
 
@@ -50,7 +50,7 @@ return new class extends Migration
     public function down()
     {
         Schema::table('users', function (Blueprint $table) {
-            $table->dropColumn(['description', 'is_admin', 'is_employer', 'profile_photo_path']);
+            $table->dropColumn(['description', 'is_admin', 'is_employer', 'profile_photo']);
         });
         
         Schema::dropIfExists('saved_jobs');

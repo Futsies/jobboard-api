@@ -84,4 +84,10 @@ class User extends Authenticatable
         return $this->hasMany(JobApplication::class, 'user_id');
     }
 
+    public function conversations(): BelongsToMany
+    {
+        return $this->belongsToMany(Conversation::class, 'conversation_user', 'user_id', 'conversation_id')
+                    ->withTimestamps();
+    }
+    
 }
