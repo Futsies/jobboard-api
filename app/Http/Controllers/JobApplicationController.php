@@ -163,10 +163,13 @@ class JobApplicationController extends Controller
         try {
             $application = JobApplication::with('job:id,employer_id')->findOrFail($applicationId); // Need job for employer check
             $user = Auth::user();
+            $isApplicant = $user->id === $application->user_id;
+            $isJobOwner = $application->job && $user->id === $application->job->employer_id;
+            $isAdmin = $user->is_admin;
 
-            // Authorization: Only job owner or admin can download
-            if ($user->id !== $application->job->employer_id && !$user->is_admin) {
-                Log::warning('Unauthorized resume download attempt for Application ID: ' . $applicationId . ' by User ID: ' . $user->id);
+            // Authorization: Allow applicant, job owner, or admin
+            if (!$isApplicant && !$isJobOwner && !$isAdmin) {
+                Log::warning('Unauthorized resume download attempt for Application ID: ' . $applicationId . ' by User ID: '  . $user->id);
                 return response()->json(['message' => 'Unauthorized'], 403);
             }
 
@@ -205,9 +208,12 @@ class JobApplicationController extends Controller
          try {
             $application = JobApplication::with('job:id,employer_id')->findOrFail($applicationId);
             $user = Auth::user();
+            $isApplicant = $user->id === $application->user_id;
+            $isJobOwner = $application->job && $user->id === $application->job->employer_id;
+            $isAdmin = $user->is_admin;
 
-            // Authorization: Only job owner or admin can download
-            if ($user->id !== $application->job->employer_id && !$user->is_admin) {
+            // Authorization: Allow applicant, job owner, or admin
+            if (!$isApplicant && !$isJobOwner && !$isAdmin) {
                  Log::warning('Unauthorized cover letter download attempt for Application ID: ' . $applicationId . ' by User ID: ' . $user->id);
                 return response()->json(['message' => 'Unauthorized'], 403);
             }

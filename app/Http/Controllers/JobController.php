@@ -7,6 +7,8 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
+use App\Mail\JobAlert;
 
 class JobController extends Controller
 {
@@ -87,9 +89,7 @@ class JobController extends Controller
      */
     public function update(Request $request, string $id) // <-- USE string $id
     {
-        // --- Manually find the job ---
         $job = Job::findOrFail($id);
-        // --- End Change ---
 
         // Authorization Check
         if ($request->user()->id != $job->employer_id && !$request->user()->is_admin) {
@@ -109,6 +109,8 @@ class JobController extends Controller
             'complete' => 'required|boolean',
         ]);
 
+        $wasComplete = $job->complete;
+        
         // Handle Logo Update
         if ($request->hasFile('company_logo')) {
             if ($job->company_logo) { Storage::disk('public')->delete($job->company_logo); }
@@ -120,6 +122,27 @@ class JobController extends Controller
 
         // Update the job
         $updated = $job->update($validated); // This will now update the correct record
+        
+        // Send email to all users who saved this job
+        // Only when complete is reset to false
+        if ((bool)$wasComplete === true && (bool)$job->complete === false) {
+            
+            // Get all users who saved this job
+            $usersToNotify = $job->savedByUsers;
+
+            if ($usersToNotify) {
+                foreach ($usersToNotify as $user) {
+                    try {
+                        // Send email to each user
+                        Mail::to($user->email)->send(new JobAlert($job));
+                        Log::info("Sent job alert to {$user->email} for Job ID {$job->id}");
+                    } catch (\Exception $e) {
+                        // Log error but don't stop the request if one email fails
+                        Log::error("Failed to send job alert to {$user->email}: " . $e->getMessage());
+                    }
+                }
+            }
+        } 
 
         // Log result (optional but helpful)
         if ($updated) {
@@ -128,8 +151,6 @@ class JobController extends Controller
             Log::error('Job ID: ' . $job->id . ' FAILED to update in DB.');
         }
 
-        // Return the *correctly* loaded and updated job
-        // Eager load employer details for the response
         return response()->json($job->load('employer'));
     }
 

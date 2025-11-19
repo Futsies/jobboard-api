@@ -8,6 +8,7 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\MailController;
 use App\Http\Controllers\JobApplicationController;
 use App\Http\Controllers\InterviewController;
+use App\Http\Controllers\ConversationController;
 
 Route::get('/user', function (Request $request) {
     return $request->user();
@@ -62,4 +63,10 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/applications/{applicationId}/schedule-interview', [InterviewController::class, 'store']); // Schedule Interview
     Route::post('/applications/{applicationId}/schedule-interview', [InterviewController::class, 'store']); // Create
     Route::get('/interviews/scheduled', [InterviewController::class, 'index']); // Get interviews scheduled BY current user
+
+    // LiveCHat
+    Route::get('/conversations', [ConversationController::class, 'index']); // Get all of my conversations
+    Route::post('/conversations/start', [ConversationController::class, 'startConversation']); // Start a new conversation (for employers)
+    Route::get('/conversations/{conversationId}/messages', [ConversationController::class, 'getMessages']); // Get all messages for one conversation
+    Route::post('/conversations/{conversationId}/messages', [ConversationController::class, 'sendMessage']); // Send a message
 });
